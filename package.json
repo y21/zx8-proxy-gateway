@@ -1,0 +1,17 @@
+{
+  "name": "zx8-proxy",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/Run.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/ws": "^7.2.1",
+    "ey": "^0.9.1",
+    "node-fetch": "^2.6.0",
+    "ws": "^7.2.1"
+  }
+}

@@ -1,0 +1,4 @@
+src/**/*.js
+configs/config.json
+.idea
+node_modules
