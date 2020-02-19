@@ -9,6 +9,8 @@ enum ProxyEvents {
     Response = 0
 }
 
+let queue: number = 0;
+
 export default class GatewayHandler {
     public http: http.Server;
     public gateway?: ws.Server;
@@ -32,44 +34,48 @@ export default class GatewayHandler {
     }
 
     public async handleMessage(message: string) {
-        if (!this.connection) {
-            return;
-        }
-        const timestamp: number = Date.now();
-        let request: Response;
-        try {
-            request = await fetch(message, {
-                headers: {
-                    "User-Agent": "zx8 indexer"
-                },
-                timeout: 5000
-            });
-        } catch(e) {
-            console.log("Failed to index %s: %s", message, e.message);
-            return;
-        }
+        ++queue;
+        setTimeout(async () => {
+            --queue;
+            if (!this.connection) {
+                return;
+            }
+            const timestamp: number = Date.now();
+            let request: Response;
+            try {
+                request = await fetch(message, {
+                    headers: {
+                        "User-Agent": "zx8 indexer"
+                    },
+                    timeout: 5000
+                });
+            } catch(e) {
+                console.log("Failed to index %s: %s", message, e.message);
+                return;
+            }
+    
+            const entry = {
+                host: (message.match(domainRegex) || [])[0],
+                url: message,
+                status: request.status,
+                headers: JSON.stringify(request.headers.raw()),
+                responseTime: Date.now() - timestamp,
+                urls: <string[]>[]
+            };
+    
+            const body = await request.text();
+            if (body.length >= 3000000) {
+                return;
+            }
+            const urls = body.match(urlRegex);
+            if (urls) {
+                entry.urls = urls;
+            }
 
-        const entry = {
-            host: (message.match(domainRegex) || [])[0],
-            url: message,
-            status: request.status,
-            headers: JSON.stringify(request.headers.raw()),
-            responseTime: Date.now() - timestamp,
-            urls: <string[]>[]
-        };
-
-        const body = await request.text();
-        if (body.length >= 3000000) {
-            return;
-        }
-        const urls = body.match(urlRegex);
-        if (urls) {
-            entry.urls = urls;
-        }
-
-        this.connection.send(JSON.stringify({
-            t: ProxyEvents.Response,
-            d: entry
-        }));
+            this.connection.send(JSON.stringify({
+                t: ProxyEvents.Response,
+                d: entry
+            }));
+        }, 50 * queue);
     }
 }
